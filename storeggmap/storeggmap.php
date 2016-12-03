@@ -55,6 +55,14 @@ class Storeggmap extends Module implements WidgetInterface
 
     public function install()
     {
+        $this->_clearCache('*');
+
+        Configuration::updateValue('STORE_GGMAP_LAT', 48.8596497);
+        Configuration::updateValue('STORE_GGMAP_LONG', 0.2328269);
+        Configuration::updateValue('STORE_GGMAP_ZOOM', 5);  
+        Configuration::updateValue('STORE_GGMAP_CLICKZOOM', 8);  
+        Configuration::updateValue('STORE_GGMAP_AUTOZOOM', false); 
+        
         return parent::install() &&
         $this->registerHook('displayBackOfficeHeader') &&
         $this->registerHook('displayHeader');
@@ -66,6 +74,9 @@ class Storeggmap extends Module implements WidgetInterface
         Configuration::deleteByName('STORE_GGMAP_ICON') &&
         Configuration::deleteByName('STORE_GGMAP_LAT') &&
         Configuration::deleteByName('STORE_GGMAP_LONG') &&
+        Configuration::deleteByName('STORE_GGMAP_ZOOM') &&
+        Configuration::deleteByName('STORE_GGMAP_CLICKZOOM') &&
+        Configuration::deleteByName('STORE_GGMAP_AUTOZOOM') &&
         parent::uninstall();
         
     }
@@ -88,6 +99,9 @@ class Storeggmap extends Module implements WidgetInterface
             Configuration::updateValue('STORE_GGMAP_APIKEY', Tools::getValue('ggmap_apikey'));
             Configuration::updateValue('STORE_GGMAP_LAT', Tools::getValue('ggmap_lat'));
             Configuration::updateValue('STORE_GGMAP_LONG', Tools::getValue('ggmap_long'));
+            Configuration::updateValue('STORE_GGMAP_ZOOM', Tools::getValue('ggmap_zoom'));
+            Configuration::updateValue('STORE_GGMAP_CLICKZOOM', Tools::getValue('ggmap_clickzoom'));
+            Configuration::updateValue('STORE_GGMAP_AUTOZOOM', Tools::getValue('ggmap_autozoom'));
             
             if (isset($_FILES['ggmap_icon']['name']) && !empty($_FILES['ggmap_icon']['name'])) {
                 Configuration::updateValue('STORE_GGMAP_ICON', $_FILES['ggmap_icon']['name']);
@@ -138,7 +152,8 @@ class Storeggmap extends Module implements WidgetInterface
                 'title' => $this->trans('CMS block', array()),
             ),
             'input' => array(
-                'content' => array(
+                'content' => 
+                array(
                     'type' => 'text',
                     'label' => $this->trans('Google Map Api key', array(), 'Modules.storeggmap'),
                     'name' => 'ggmap_apikey',
@@ -156,6 +171,35 @@ class Storeggmap extends Module implements WidgetInterface
                     'label' => $this->trans('Default longitude', array(), 'Modules.storeggmap'),
                     'name' => 'ggmap_long',
                     'col' => 4
+                ),
+                array(
+                    'type' => 'text',
+                    'label' => $this->trans('Default zoom', array(), 'Modules.storeggmap'),
+                    'name' => 'ggmap_zoom',
+                    'col' => 4
+                ),
+                array(
+                    'type' => 'text',
+                    'label' => $this->trans('Default Click zoom', array(), 'Modules.storeggmap'),
+                    'name' => 'ggmap_clickzoom',
+                    'col' => 4
+                ),
+                array(
+                    'type' => 'switch',
+                    'label' => $this->trans('Auto Center Zoom', array(), 'Modules.storeggmap'),
+                    'name' => 'ggmap_autozoom',
+                    'values' => array(
+                        array(
+                            'id' => 'active_on',
+                            'value' => 1,
+                            'label' => $this->trans('Yes', array(), 'Admin.Global'),
+                        ),
+                        array(
+                            'id' => 'active_off',
+                            'value' => 0,
+                            'label' => $this->trans('No', array(), 'Admin.Global'),
+                        ),
+                    ),
                 ),
                 array(
                     'type' => 'file',
@@ -208,17 +252,34 @@ class Storeggmap extends Module implements WidgetInterface
         $fields_value['ggmap_icon'] = Configuration::get('STORE_GGMAP_ICON');
         $fields_value['ggmap_lat'] = Configuration::get('STORE_GGMAP_LAT');
         $fields_value['ggmap_long'] = Configuration::get('STORE_GGMAP_LONG');
+        $fields_value['ggmap_zoom'] = Configuration::get('STORE_GGMAP_ZOOM');
+        $fields_value['ggmap_clickzoom'] = Configuration::get('STORE_GGMAP_CLICKZOOM');
+        $fields_value['ggmap_autozoom'] = Configuration::get('STORE_GGMAP_AUTOZOOM');
 
         return $fields_value;
     }
     
-    public function defaultLatLng($lng = null) {
+    public function defaultLatLng($lng = null)
+    {
+        // simplify whith only one call
+        // var mapLatLng= new array();
+        // mapLatLng['lat']=
+        // mapLatLng['lng']=
+        // return mapLatLng;
         
-        $store = Db::getInstance()->getRow('SELECT latitude, longitude FROM '._DB_PREFIX_.'store');
-        if ($lng) {
-            return $store['longitude'];
-        } else{
-            return $store['latitude'];
+        if (Configuration::get('STORE_GGMAP_AUTOZOOM')) {
+          $store = Db::getInstance()->getRow('SELECT latitude, longitude FROM '._DB_PREFIX_.'store');
+          if ($lng) {
+              return $store['longitude'];
+          } else{
+              return $store['latitude'];
+          }
+        } else {
+          if ($lng) {
+              return Configuration::get('STORE_GGMAP_LONG');
+          } else{
+              return Configuration::get('STORE_GGMAP_LAT');
+          }          
         }
     }
     
@@ -237,6 +298,11 @@ class Storeggmap extends Module implements WidgetInterface
                 'id_lang' => (int)$this->context->language->id,
                 'defaultLat' => $this->defaultLatLng(),
                 'defaultLong' => $this->defaultLatLng(1),
+                'defaultZoom' => Configuration::get('STORE_GGMAP_ZOOM'),
+                'clickZoom' => Configuration::get('STORE_GGMAP_CLICKZOOM'),
+                'transPhone' => $this->trans('Phone', array(), 'Admin.Global'),
+                'transFax' => $this->trans('Fax', array(), 'Admin.Global'),
+                'transOpenhours' => $this->trans('Open hours', array(), 'Admin.Global'),
             ));
         }
     }
@@ -252,6 +318,7 @@ class Storeggmap extends Module implements WidgetInterface
             Media::addJsDef(array(
                 'defaultLat' => $this->defaultLatLng(),
                 'defaultLong' => $this->defaultLatLng(1),
+                'defaultZoom' => Configuration::get('STORE_GGMAP_ICON'),
             ));
         }
     }

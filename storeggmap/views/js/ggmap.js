@@ -8,7 +8,7 @@ function initMap() {
         disableDefaultUI:true,
         fullscreenControl:true,
         streetViewControl:true,
-        zoom: 5
+        zoom: defaultZoom
     });
     
     $.ajax({
@@ -62,14 +62,14 @@ function infosHtml(store){
     storeHtml += '<p>' + store.address1 + (store.address2 ? '<br />' + store.address2 : '') + '<br/>' + store.city + ', ' + (store.postcode ? store.postcode : '');
     storeHtml += '<br/>' + store.country + (store.state ? ', ' + store.state : '') + '</p>';
     if ( store.phone || store.fax) {
-        storeHtml += '<p> Phone : ' + (store.phone ? store.phone : ' -') + '<br />Fax : ' + (store.fax ? store.fax : ' -') + '</p><hr/>';
+        storeHtml += '<p> ' + transPhone + ' : ' + (store.phone ? store.phone : ' -') + '<br />' + transFax + ' : ' + (store.fax ? store.fax : ' -') + '</p><hr/>';
     }
     if (store.note) {
         storeHtml += '<p> Note : ' + store.note + '</p><hr/>';
     }
     if (store.hours) {
         storeHtml += '<ul>';
-        storeHtml += '<li>Our Hours :</li>';
+        storeHtml += '<li>' + transOpenhours + ' :</li>';
         for (hours of store.hours) {
             storeHtml += '<li>' + hours + '</li>';
         }

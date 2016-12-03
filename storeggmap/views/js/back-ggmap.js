@@ -8,7 +8,7 @@ function initMap() {
         disableDefaultUI:true,
         fullscreenControl:true,
         streetViewControl:true,
-        zoom: 5
+        zoom: parseInt(defaultZoom)
     });
     
     addMarker({lat: parseFloat(defaultLat), lng: parseFloat(defaultLong)});
@@ -49,6 +49,7 @@ $(document).ready(function(){
         if ( $('#ggmap_lat').val() && $('#ggmap_long').val()) {
             defaultLat = $('#ggmap_lat').val();
             defaultLong = $('#ggmap_long').val();
+            defaultZoom = $('#ggmap_zoom').val();
         }
         initMap();
     } else {
